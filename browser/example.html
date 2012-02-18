@@ -1,0 +1,165 @@
+<html>
+  <head>
+  <script src="jquery.min.js" type="text/javascript"></script>
+  <script src="jquery-ui.min.js"></script>
+  <script src="./sql-parser.js" type="text/javascript" charset="utf-8"></script>
+  <script type="text/javascript" charset="utf-8">
+    var obj = {
+      "tables" : ["table1", "table2", "table3"],
+      "columns" : [
+            ["a", "b", "c"],
+            ["foo", "bar", "baz"],
+            ["x", "y", "z"]
+      ],
+      "data" : [
+            [
+                    {"a" : "data1a", "b" : "data1b", "c" : 1},
+                    {"a" : "data2a", "b" : "data2b", "c" : 2},
+                    {"a" : "data3a", "b" : "data3b", "c" : 3}
+            ],
+            [
+                    {"foo" : "data21", "bar" : 4, "baz" : "data3a"},
+                    {"foo" : "data22", "bar" : 5, "baz" : "data3b"},
+                    {"foo" : "data23", "bar" : 6, "baz" : "data3c"},
+                    {"foo" : "data24", "bar" : 7, "baz" : "data3d"}
+            ],
+            [
+                    {"x" : 100, "y" : "hello", "z" : "feed"},
+                    {"x" : 200, "y" : "world", "z" : "dad"},
+                    {"x" : 300, "y" : "!", "z" : "beef"}
+            ]
+      ]
+    };
+
+/*    #var parseobj = SQLParser.parse('select * from test where a = 1 and foo = "bar"'); */
+    var parseobj = SQLParser.parse('select * from table1 join table2 on table1.a = table2.b where a = "data1a" and (c = 1 or b = "data1b")');
+
+    var SQLP = {
+    	"tables_obj" : obj,
+	"init" : function(table_array) {
+		// Create the table to query
+	},
+	// returns an array of data that matches the sql query
+	"get_data" : function(cols, table, where) {
+		var cols_to_return = this.get_columns_selected(cols, table);
+		var table_being_queried = this.tables_obj.data[this.get_table_index(table)];
+		var rows = [];
+		// check for the where clause to be satisifed
+		console.log('');
+		$.each(table_being_queried, function(key, val) {
+			// return rows
+			var result = [];
+			$.each(val, function(a, b) {
+				result.push(a + ':' + b);
+			});
+			console.log(result.join(' | '));
+			rows.push(val);
+//			rows.push(table_being_queried[i]);
+		});
+		console.log(table_being_queried.length + ' rows returned');
+		return rows;
+	/*	console.log('***');
+		this.get_where_conditions(where);
+		console.log('***'); */
+	},
+	"get_where_conditions" : function(where) {
+		console.log(where);
+		console.log(where.conditions.left.left.left.value);
+		console.log(where.conditions.left.left.operation);
+		console.log(where.conditions.left.left.right.value);
+		console.log(where.conditions.left.operation);
+		console.log(where.conditions.left.right.left.value);
+		console.log(where.conditions.left.right.operation);
+		console.log(where.conditions.left.right.right.value);
+		console.log(where.conditions.right.operation);
+		console.log(where.conditions.right.left.value);
+		console.log(where.conditions.right.operation);
+		console.log(where.conditions.right.right.value);
+	},
+	// based on the sql query, returns an array
+	// with all of the columns that we want selected
+    	"get_columns_selected" : function(cols, table) {
+		var tableindex = this.get_table_index(table);
+		if(cols.toString() == '*') {
+			// get all columns
+			var keys = [];
+			for(var key in this.tables_obj.data[0][tableindex]) {
+				keys.push(key); 
+			}
+		}
+		else {
+			var keys = cols.toString().split(",");
+		}
+		return keys;
+	},
+
+
+	/* 
+		function returns the index
+		of the table 
+	*/
+	"get_table_index" : function(table) {
+		for(var i = 0; i < this.tables_obj.tables.length; i++) {
+			// HACK .... value is getting passed as "`table`"
+			if('`' + this.tables_obj.tables[i] + '`' == table) {
+				return i;
+			}
+		}
+		// Error
+		throw new Error("No table found matching " + table);
+		return -1;
+	}
+    };
+
+    var LOADDATA = {
+	"display" : function() {
+		var data = "";
+		var header = "";
+		var returnhtml = "";
+		$.each(SQLP.tables_obj.data, function(key, value) {
+			// Get the columns
+			header = "";
+			var header_array = [];
+			$.each(SQLP.tables_obj.columns[key], function(k, v) {
+				header += '<div style="width: 100px; float left;">'+v+'</div>';
+				header_array.push(v);
+			});
+			// gets all the data
+			$.each(value, function(k, v) {
+				data += '<div>';
+				$.each(header_array, function(l, m) {
+					data += '<div style="width:100px float: left;">' + eval("v." + m) + '</div>';	
+				});
+				data += '</div>';
+			});
+		returnhtml += '<div>' + header + '</div>';
+		returnhtml += '<div>' + data + '</div>';
+		});
+		$('#resultsdiv').html(returnhtml);
+
+	}
+    };
+
+
+//    SQLP.get_columns_selected(parseobj.fields, parseobj.source);
+//    var results = SQLP.get_data(parseobj.fields, parseobj.source, parseobj.where);
+    // console.log(results);
+
+    $(document).ready(function() {
+//	LOADDATA.display();
+	$('input[name=submit]').click(function(e) {
+		var query = $('input[name=sql_query]').val();
+		var parseobj = SQLParser.parse(query);
+		SQLP.get_data(parseobj.fields, parseobj.source, parseobj.where);
+		e.preventDefault();
+	});
+    });
+  </script>
+  </head>
+  <body>
+  	<input type="text" name="sql_query" value="" />
+	<input type="button" name="submit" value="Query Data" />
+	<div id="resultsdiv">
+	</div>
+  </body>
+</html>
